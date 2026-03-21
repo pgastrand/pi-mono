@@ -1,0 +1,226 @@
+{
+  "main": {
+    "id": "a460c0fd0021abde",
+    "type": "split",
+    "children": [
+      {
+        "id": "900a96d5a0de606f",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "58c77145a4d746b3",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "10-mirrors/coding-agent/packages_coding-agent_README.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "packages_coding-agent_README"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "19f0eaa2fb6d274e",
+    "type": "split",
+    "children": [
+      {
+        "id": "881b582587187bf4",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "fcf1dfd943383916",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Files"
+            }
+          },
+          {
+            "id": "68b4a8a983fbe7f3",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Search"
+            }
+          },
+          {
+            "id": "3d6ee8b001ddb8f0",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "Bookmarks"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "b5ad032a274769df",
+    "type": "split",
+    "children": [
+      {
+        "id": "c8edbe50d1d37433",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "4f9423ec54bff2e2",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "10-mirrors/coding-agent/packages_coding-agent_README.md",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Backlinks for packages_coding-agent_README"
+            }
+          },
+          {
+            "id": "1ec5799d7d683a87",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "10-mirrors/coding-agent/packages_coding-agent_README.md",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Outgoing links from packages_coding-agent_README"
+            }
+          },
+          {
+            "id": "0b2c0c7594d9e24d",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Tags"
+            }
+          },
+          {
+            "id": "eefcde7444774c03",
+            "type": "leaf",
+            "state": {
+              "type": "all-properties",
+              "state": {
+                "sortOrder": "frequency",
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-archive",
+              "title": "All properties"
+            }
+          },
+          {
+            "id": "e878f083a58ebf5a",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "10-mirrors/coding-agent/packages_coding-agent_README.md",
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Outline of packages_coding-agent_README"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "switcher:Open quick switcher": false,
+      "graph:Open graph view": false,
+      "canvas:Create new canvas": false,
+      "daily-notes:Open today's daily note": false,
+      "templates:Insert template": false,
+      "command-palette:Open command palette": false,
+      "bases:Create new base": false
+    }
+  },
+  "active": "58c77145a4d746b3",
+  "lastOpenFiles": [
+    "resources/bench.png.md",
+    "resources",
+    "01-packages/pods/home.md",
+    "10-mirrors/agent/packages_agent_README.md",
+    "00-start/dashboards.md",
+    "index.md",
+    "90-reference/repo/CLAUDE.md",
+    "90-reference/repo/CONTRIBUTING.md",
+    "90-reference/repo/README.md",
+    "01-packages/agent/dashboard.md",
+    "01-packages/coding-agent/home.md",
+    "01-packages/coding-agent/guides/json.md",
+    "00-start/home.md",
+    "01-packages/mom/home.md",
+    "Untitled.canvas",
+    "00-start/graph-index.md",
+    "coding-agent-home.md",
+    "10-mirrors/web-ui/examples/packages_web-ui_example_README.md",
+    "10-mirrors/web-ui/api/packages_web-ui_src_index.md",
+    "10-mirrors/tui/api/packages_tui_src_tui.md",
+    "10-mirrors/tui/api/packages_tui_src_terminal.md",
+    "10-mirrors/tui/api/packages_tui_src_index.md",
+    "10-mirrors/pods/docs/packages_pods_docs_qwen3-coder.md",
+    "10-mirrors/pods/docs/packages_pods_docs_plan.md",
+    "10-mirrors/pods/docs/packages_pods_docs_models.md",
+    "10-mirrors/pods/docs/packages_pods_docs_kimi-k2.md",
+    "10-mirrors/pods/docs/packages_pods_docs_implementation-plan.md",
+    "10-mirrors/pods/docs/packages_pods_docs_gpt-oss.md",
+    "10-mirrors/web-ui/examples",
+    "10-mirrors/web-ui/api",
+    "10-mirrors/tui/api",
+    "10-mirrors/pods/docs",
+    "10-mirrors/pods/api",
+    "10-mirrors/mom/docs",
+    "10-mirrors/mom/api",
+    "10-mirrors/coding-agent/test-fixtures",
+    "10-mirrors/coding-agent/examples"
+  ]
+}

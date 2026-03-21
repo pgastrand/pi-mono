@@ -1,0 +1,97 @@
+<h1 id="oss-vacation">🏖️ OSS Vacation</h1>
+<p><strong>Issue tracker and PRs reopen March 2, 2026.</strong></p>
+<p>All PRs will be auto-closed until then. Approved contributors can
+submit PRs after vacation without reapproval. For support, join <a
+href="https://discord.com/invite/3cU7Bz4UPx">Discord</a>.</p>
+<hr />
+<p align="center">
+<a href="https://shittycodingagent.ai">
+<img src="https://shittycodingagent.ai/logo.svg" alt="pi logo" width="128">
+</a>
+</p>
+<p align="center">
+<a href="https://discord.com/invite/3cU7Bz4UPx"><img alt="Discord" src="https://img.shields.io/badge/discord-community-5865F2?style=flat-square&logo=discord&logoColor=white" /></a>
+<a href="https://github.com/badlogic/pi-mono/actions/workflows/ci.yml"><img alt="Build status" src="https://img.shields.io/github/actions/workflow/status/badlogic/pi-mono/ci.yml?style=flat-square&branch=main" /></a>
+</p>
+<p align="center">
+<a href="https://pi.dev">pi.dev</a> domain graciously donated by
+<br /><br />
+<a href="https://exe.dev"><img src="packages/coding-agent/docs/images/exy.png" alt="Exy mascot" width="48" /><br />exe.dev</a>
+</p>
+<h1 id="pi-monorepo">Pi Monorepo</h1>
+<blockquote>
+<p><strong>Looking for the pi coding agent?</strong> See <strong><a
+href="packages/coding-agent">packages/coding-agent</a></strong> for
+installation and usage.</p>
+</blockquote>
+<p>Tools for building AI agents and managing LLM deployments.</p>
+<h2 id="packages">Packages</h2>
+<table>
+<colgroup>
+<col style="width: 40%" />
+<col style="width: 59%" />
+</colgroup>
+<thead>
+<tr>
+<th>Package</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong><a href="packages/ai"><span class="citation"
+data-cites="mariozechner/pi-ai">@mariozechner/pi-ai</span></a></strong></td>
+<td>Unified multi-provider LLM API (OpenAI, Anthropic, Google,
+etc.)</td>
+</tr>
+<tr>
+<td><strong><a href="packages/agent"><span class="citation"
+data-cites="mariozechner/pi-agent-core">@mariozechner/pi-agent-core</span></a></strong></td>
+<td>Agent runtime with tool calling and state management</td>
+</tr>
+<tr>
+<td><strong><a href="packages/coding-agent"><span class="citation"
+data-cites="mariozechner/pi-coding-agent">@mariozechner/pi-coding-agent</span></a></strong></td>
+<td>Interactive coding agent CLI</td>
+</tr>
+<tr>
+<td><strong><a href="packages/mom"><span class="citation"
+data-cites="mariozechner/pi-mom">@mariozechner/pi-mom</span></a></strong></td>
+<td>Slack bot that delegates messages to the pi coding agent</td>
+</tr>
+<tr>
+<td><strong><a href="packages/tui"><span class="citation"
+data-cites="mariozechner/pi-tui">@mariozechner/pi-tui</span></a></strong></td>
+<td>Terminal UI library with differential rendering</td>
+</tr>
+<tr>
+<td><strong><a href="packages/web-ui"><span class="citation"
+data-cites="mariozechner/pi-web-ui">@mariozechner/pi-web-ui</span></a></strong></td>
+<td>Web components for AI chat interfaces</td>
+</tr>
+<tr>
+<td><strong><a href="packages/pods"><span class="citation"
+data-cites="mariozechner/pi-pods">@mariozechner/pi-pods</span></a></strong></td>
+<td>CLI for managing vLLM deployments on GPU pods</td>
+</tr>
+</tbody>
+</table>
+<h2 id="contributing">Contributing</h2>
+<p>See <a href="CONTRIBUTING.md">CONTRIBUTING.md</a> for contribution
+guidelines and <a href="AGENTS.md">AGENTS.md</a> for project-specific
+rules (for both humans and agents).</p>
+<h2 id="development">Development</h2>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="ex">npm</span> install          <span class="co"># Install all dependencies</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="ex">npm</span> run build        <span class="co"># Build all packages</span></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="ex">npm</span> run check        <span class="co"># Lint, format, and type check</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="ex">./test.sh</span>            <span class="co"># Run tests (skips LLM-dependent tests without API keys)</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="ex">./pi-test.sh</span>         <span class="co"># Run pi from sources (must be run from repo root)</span></span></code></pre></div>
+<blockquote>
+<p><strong>Note:</strong> <code>npm run check</code> requires
+<code>npm run build</code> to be run first. The web-ui package uses
+<code>tsc</code> which needs compiled <code>.d.ts</code> files from
+dependencies.</p>
+</blockquote>
+<h2 id="license">License</h2>
+<p>MIT</p>

@@ -1,0 +1,134 @@
+<h1 id="index.ts">index.ts</h1>
+<blockquote>
+<p>Auto-generated documentation for
+<code>packages/agent/src/index.ts</code></p>
+</blockquote>
+<h2 id="overview">Overview</h2>
+<p>Main entry point for the <code>@mariozechner/pi-agent-core</code>
+package. Exports the Agent class, agent loop functions, proxy utilities,
+and all type definitions. This is a barrel file that re-exports from
+submodules.</p>
+<h2 id="dependencies">Dependencies</h2>
+<table>
+<thead>
+<tr>
+<th>Import</th>
+<th>Purpose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>./agent.js</code></td>
+<td><code>Agent</code> class</td>
+</tr>
+<tr>
+<td><code>./agent-loop.js</code></td>
+<td><code>agentLoop</code> and <code>agentLoopContinue</code>
+functions</td>
+</tr>
+<tr>
+<td><code>./proxy.js</code></td>
+<td><code>streamProxy</code> for proxy backends</td>
+</tr>
+<tr>
+<td><code>./types.js</code></td>
+<td>All type definitions</td>
+</tr>
+</tbody>
+</table>
+<h2 id="api-exports">API / Exports</h2>
+<h3 id="core-exports">Core Exports</h3>
+<p><strong><code>Agent</code></strong> - Main agent class</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode typescript"><code class="sourceCode typescript"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { Agent } <span class="im">from</span> <span class="st">&quot;@mariozechner/pi-agent-core&quot;</span><span class="op">;</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> agent <span class="op">=</span> <span class="kw">new</span> <span class="fu">Agent</span>({</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  initialState<span class="op">:</span> {</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>    systemPrompt<span class="op">:</span> <span class="st">&quot;You are a helpful assistant.&quot;</span><span class="op">,</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a>    model<span class="op">:</span> <span class="fu">getModel</span>(<span class="st">&quot;anthropic&quot;</span><span class="op">,</span> <span class="st">&quot;claude-sonnet-4&quot;</span>)<span class="op">,</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a>  }</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<h3 id="loop-functions">Loop Functions</h3>
+<p><strong><code>agentLoop</code></strong> - Start an agent loop with
+new prompt</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode typescript"><code class="sourceCode typescript"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">agentLoop</span>(</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  prompts<span class="op">:</span> AgentMessage[]<span class="op">,</span></span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  context<span class="op">:</span> AgentContext<span class="op">,</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>  config<span class="op">:</span> AgentLoopConfig<span class="op">,</span></span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>  signal<span class="op">?:</span> AbortSignal<span class="op">,</span></span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>  streamFn<span class="op">?:</span> StreamFn</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>)<span class="op">:</span> EventStream<span class="op">&lt;</span>AgentEvent<span class="op">,</span> AgentMessage[]<span class="op">&gt;</span></span></code></pre></div>
+<p><strong><code>agentLoopContinue</code></strong> - Continue from
+existing context</p>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode typescript"><code class="sourceCode typescript"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">agentLoopContinue</span>(</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>  context<span class="op">:</span> AgentContext<span class="op">,</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>  config<span class="op">:</span> AgentLoopConfig<span class="op">,</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>  signal<span class="op">?:</span> AbortSignal<span class="op">,</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>  streamFn<span class="op">?:</span> StreamFn</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>)<span class="op">:</span> EventStream<span class="op">&lt;</span>AgentEvent<span class="op">,</span> AgentMessage[]<span class="op">&gt;</span></span></code></pre></div>
+<h3 id="proxy-support">Proxy Support</h3>
+<p><strong><code>streamProxy</code></strong> - Proxy stream function for
+custom backends</p>
+<div class="sourceCode" id="cb4"><pre
+class="sourceCode typescript"><code class="sourceCode typescript"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> { Agent<span class="op">,</span> streamProxy } <span class="im">from</span> <span class="st">&quot;@mariozechner/pi-agent-core&quot;</span><span class="op">;</span></span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="kw">const</span> agent <span class="op">=</span> <span class="kw">new</span> <span class="fu">Agent</span>({</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>  streamFn<span class="op">:</span> (model<span class="op">,</span> context<span class="op">,</span> options) <span class="kw">=&gt;</span> </span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>    <span class="fu">streamProxy</span>(model<span class="op">,</span> context<span class="op">,</span> { <span class="op">...</span>options<span class="op">,</span> authToken<span class="op">:</span> <span class="st">&quot;...&quot;</span><span class="op">,</span> proxyUrl<span class="op">:</span> <span class="st">&quot;...&quot;</span> })</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>})<span class="op">;</span></span></code></pre></div>
+<h3 id="type-exports">Type Exports</h3>
+<p>Re-exports all types from <code>./types.js</code>: -
+<code>AgentEvent</code>, <code>AgentMessage</code>,
+<code>AgentState</code> - <code>AgentContext</code>,
+<code>AgentLoopConfig</code> - <code>AgentTool</code>,
+<code>AgentToolResult</code>, <code>AgentToolUpdateCallback</code> -
+<code>CustomAgentMessages</code>, <code>ThinkingLevel</code> -
+<code>StreamFn</code></p>
+<h2 id="uml-diagrams">UML Diagrams</h2>
+<h3 id="module-structure">Module Structure</h3>
+<pre class="mermaid"><code>classDiagram
+    class index {
+        +Agent
+        +agentLoop()
+        +agentLoopContinue()
+        +streamProxy()
+        +AgentEvent
+        +AgentMessage
+        +AgentState
+        +AgentContext
+        +AgentLoopConfig
+        +AgentTool
+        +ThinkingLevel
+    }
+    
+    class AgentImpl {
+        +prompt()
+        +continue()
+        +subscribe()
+        +abort()
+    }
+    
+    class agentLoop {
+        +AgentEvent stream
+    }
+    
+    class streamProxy {
+        +proxy stream
+    }
+    
+    index -- AgentImpl
+    index -- agentLoop
+    index -- streamProxy</code></pre>
+<h3 id="export-dependency-graph">Export Dependency Graph</h3>
+<pre class="mermaid"><code>graph TD
+    index[index.ts] --&gt; Agent[agent.js]
+    index --&gt; AgentLoop[agent-loop.js]
+    index --&gt; Proxy[proxy.js]
+    index --&gt; Types[types.js]
+    
+    Agent --&gt; AgentLoop
+    AgentLoop --&gt; Types
+    Proxy --&gt; Types
+    Agent --&gt; Types</code></pre>

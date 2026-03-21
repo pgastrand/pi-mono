@@ -1,0 +1,273 @@
+<h1 id="development-rules">Development Rules</h1>
+<h2 id="first-message">First Message</h2>
+<p>If the user did not give you a concrete task in their first message,
+read README.md, then ask which module(s) to work on. Based on the
+answer, read the relevant README.md files in parallel. -
+packages/ai/README.md - packages/tui/README.md -
+packages/agent/README.md - packages/coding-agent/README.md -
+packages/mom/README.md - packages/pods/README.md -
+packages/web-ui/README.md</p>
+<h2 id="code-quality">Code Quality</h2>
+<ul>
+<li>No <code>any</code> types unless absolutely necessary</li>
+<li>Check node_modules for external API type definitions instead of
+guessing</li>
+<li><strong>NEVER use inline imports</strong> - no
+<code>await import("./foo.js")</code>, no
+<code>import("pkg").Type</code> in type positions, no dynamic imports
+for types. Always use standard top-level imports.</li>
+<li>NEVER remove or downgrade code to fix type errors from outdated
+dependencies; upgrade the dependency instead</li>
+<li>Always ask before removing functionality or code that appears to be
+intentional</li>
+<li>Never hardcode key checks with, eg.
+<code>matchesKey(keyData, "ctrl+x")</code>. All keybindings must be
+configurable. Add default to matching object
+(<code>DEFAULT_EDITOR_KEYBINDINGS</code> or
+<code>DEFAULT_APP_KEYBINDINGS</code>)</li>
+</ul>
+<h2 id="commands">Commands</h2>
+<ul>
+<li>After code changes (not documentation changes):
+<code>npm run check</code> (get full output, no tail). Fix all errors,
+warnings, and infos before committing.</li>
+<li>Note: <code>npm run check</code> does not run tests.</li>
+<li>NEVER run: <code>npm run dev</code>, <code>npm run build</code>,
+<code>npm test</code></li>
+<li>Only run specific tests if user instructs:
+<code>npx tsx ../../node_modules/vitest/dist/cli.js --run test/specific.test.ts</code></li>
+<li>Run tests from the package root, not the repo root.</li>
+<li>When writing tests, run them, identify issues in either the test or
+implementation, and iterate until fixed.</li>
+<li>NEVER commit unless user asks</li>
+</ul>
+<h2 id="github-issues">GitHub Issues</h2>
+<p>When reading issues: - Always read all comments on the issue - Use
+this command to get everything in one call:
+<code>bash   gh issue view &lt;number&gt; --json title,body,comments,labels,state</code></p>
+<p>When creating issues: - Add <code>pkg:*</code> labels to indicate
+which package(s) the issue affects - Available labels:
+<code>pkg:agent</code>, <code>pkg:ai</code>,
+<code>pkg:coding-agent</code>, <code>pkg:mom</code>,
+<code>pkg:pods</code>, <code>pkg:tui</code>, <code>pkg:web-ui</code> -
+If an issue spans multiple packages, add all relevant labels</p>
+<p>When closing issues via commit: - Include
+<code>fixes #&lt;number&gt;</code> or
+<code>closes #&lt;number&gt;</code> in the commit message - This
+automatically closes the issue when the commit is merged</p>
+<h2 id="pr-workflow">PR Workflow</h2>
+<ul>
+<li>Analyze PRs without pulling locally first</li>
+<li>If the user approves: create a feature branch, pull PR, rebase on
+main, apply adjustments, commit, merge into main, push, close PR, and
+leave a comment in the user’s tone</li>
+<li>You never open PRs yourself. We work in feature branches until
+everything is according to the user’s requirements, then merge into
+main, and push.</li>
+</ul>
+<h2 id="tools">Tools</h2>
+<ul>
+<li>GitHub CLI for issues/PRs</li>
+<li>Add package labels to issues/PRs: pkg:agent, pkg:ai,
+pkg:coding-agent, pkg:mom, pkg:pods, pkg:tui, pkg:web-ui</li>
+</ul>
+<h2 id="testing-pi-interactive-mode-with-tmux">Testing pi Interactive
+Mode with tmux</h2>
+<p>To test pi’s TUI in a controlled terminal environment:</p>
+<div class="sourceCode" id="cb1"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Create tmux session with specific dimensions</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="ex">tmux</span> new-session <span class="at">-d</span> <span class="at">-s</span> pi-test <span class="at">-x</span> 80 <span class="at">-y</span> 24</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co"># Start pi from source</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="ex">tmux</span> send-keys <span class="at">-t</span> pi-test <span class="st">&quot;cd /Users/badlogic/workspaces/pi-mono &amp;&amp; ./pi-test.sh&quot;</span> Enter</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co"># Wait for startup, then capture output</span></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="fu">sleep</span> 3 <span class="kw">&amp;&amp;</span> <span class="ex">tmux</span> capture-pane <span class="at">-t</span> pi-test <span class="at">-p</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Send input</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="ex">tmux</span> send-keys <span class="at">-t</span> pi-test <span class="st">&quot;your prompt here&quot;</span> Enter</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a><span class="co"># Send special keys</span></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="ex">tmux</span> send-keys <span class="at">-t</span> pi-test Escape</span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="ex">tmux</span> send-keys <span class="at">-t</span> pi-test C-o  <span class="co"># ctrl+o</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a><span class="co"># Cleanup</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a><span class="ex">tmux</span> kill-session <span class="at">-t</span> pi-test</span></code></pre></div>
+<h2 id="style">Style</h2>
+<ul>
+<li>Keep answers short and concise</li>
+<li>No emojis in commits, issues, PR comments, or code</li>
+<li>No fluff or cheerful filler text</li>
+<li>Technical prose only, be kind but direct (e.g., “Thanks <span
+class="citation" data-cites="user">@user</span>” not “Thanks so much
+<span class="citation" data-cites="user">@user</span>!”)</li>
+</ul>
+<h2 id="changelog">Changelog</h2>
+<p>Location: <code>packages/*/CHANGELOG.md</code> (each package has its
+own)</p>
+<h3 id="format">Format</h3>
+<p>Use these sections under <code>## [Unreleased]</code>: -
+<code>### Breaking Changes</code> - API changes requiring migration -
+<code>### Added</code> - New features - <code>### Changed</code> -
+Changes to existing functionality - <code>### Fixed</code> - Bug fixes -
+<code>### Removed</code> - Removed features</p>
+<h3 id="rules">Rules</h3>
+<ul>
+<li>Before adding entries, read the full <code>[Unreleased]</code>
+section to see which subsections already exist</li>
+<li>New entries ALWAYS go under <code>## [Unreleased]</code>
+section</li>
+<li>Append to existing subsections (e.g., <code>### Fixed</code>), do
+not create duplicates</li>
+<li>NEVER modify already-released version sections (e.g.,
+<code>## [0.12.2]</code>)</li>
+<li>Each version section is immutable once released</li>
+</ul>
+<h3 id="attribution">Attribution</h3>
+<ul>
+<li><strong>Internal changes (from issues)</strong>:
+<code>Fixed foo bar ([#123](https://github.com/badlogic/pi-mono/issues/123))</code></li>
+<li><strong>External contributions</strong>:
+<code>Added feature X ([#456](https://github.com/badlogic/pi-mono/pull/456) by [@username](https://github.com/username))</code></li>
+</ul>
+<h2 id="adding-a-new-llm-provider-packagesai">Adding a New LLM Provider
+(packages/ai)</h2>
+<p>Adding a new provider requires changes across multiple files:</p>
+<h3 id="core-types-packagesaisrctypes.ts">1. Core Types
+(<code>packages/ai/src/types.ts</code>)</h3>
+<ul>
+<li>Add API identifier to <code>Api</code> type union (e.g.,
+<code>"bedrock-converse-stream"</code>)</li>
+<li>Create options interface extending <code>StreamOptions</code></li>
+<li>Add mapping to <code>ApiOptionsMap</code></li>
+<li>Add provider name to <code>KnownProvider</code> type union</li>
+</ul>
+<h3 id="provider-implementation-packagesaisrcproviders">2. Provider
+Implementation (<code>packages/ai/src/providers/</code>)</h3>
+<p>Create provider file exporting: -
+<code>stream&lt;Provider&gt;()</code> function returning
+<code>AssistantMessageEventStream</code> - Message/tool conversion
+functions - Response parsing emitting standardized events
+(<code>text</code>, <code>tool_call</code>, <code>thinking</code>,
+<code>usage</code>, <code>stop</code>)</p>
+<h3 id="stream-integration-packagesaisrcstream.ts">3. Stream Integration
+(<code>packages/ai/src/stream.ts</code>)</h3>
+<ul>
+<li>Import provider’s stream function and options type</li>
+<li>Add credential detection in <code>getEnvApiKey()</code></li>
+<li>Add case in <code>mapOptionsForApi()</code> for
+<code>SimpleStreamOptions</code> mapping</li>
+<li>Add provider to <code>streamFunctions</code> map</li>
+</ul>
+<h3 id="model-generation-packagesaiscriptsgenerate-models.ts">4. Model
+Generation (<code>packages/ai/scripts/generate-models.ts</code>)</h3>
+<ul>
+<li>Add logic to fetch/parse models from provider source</li>
+<li>Map to standardized <code>Model</code> interface</li>
+</ul>
+<h3 id="tests-packagesaitest">5. Tests
+(<code>packages/ai/test/</code>)</h3>
+<p>Add provider to: <code>stream.test.ts</code>,
+<code>tokens.test.ts</code>, <code>abort.test.ts</code>,
+<code>empty.test.ts</code>, <code>context-overflow.test.ts</code>,
+<code>image-limits.test.ts</code>,
+<code>unicode-surrogate.test.ts</code>,
+<code>tool-call-without-result.test.ts</code>,
+<code>image-tool-result.test.ts</code>,
+<code>total-tokens.test.ts</code>,
+<code>cross-provider-handoff.test.ts</code>.</p>
+<p>For <code>cross-provider-handoff.test.ts</code>, add at least one
+provider/model pair. If the provider exposes multiple model families
+(for example GPT and Claude), add at least one pair per family.</p>
+<p>For non-standard auth, create utility (e.g.,
+<code>bedrock-utils.ts</code>) with credential detection.</p>
+<h3 id="coding-agent-packagescoding-agent">6. Coding Agent
+(<code>packages/coding-agent/</code>)</h3>
+<ul>
+<li><code>src/core/model-resolver.ts</code>: Add default model ID to
+<code>DEFAULT_MODELS</code></li>
+<li><code>src/cli/args.ts</code>: Add env var documentation</li>
+<li><code>README.md</code>: Add provider setup instructions</li>
+</ul>
+<h3 id="documentation">7. Documentation</h3>
+<ul>
+<li><code>packages/ai/README.md</code>: Add to providers table, document
+options/auth, add env vars</li>
+<li><code>packages/ai/CHANGELOG.md</code>: Add entry under
+<code>## [Unreleased]</code></li>
+</ul>
+<h2 id="releasing">Releasing</h2>
+<p><strong>Lockstep versioning</strong>: All packages always share the
+same version number. Every release updates all packages together.</p>
+<p><strong>Version semantics</strong> (no major releases): -
+<code>patch</code>: Bug fixes and new features - <code>minor</code>: API
+breaking changes</p>
+<h3 id="steps">Steps</h3>
+<ol type="1">
+<li><p><strong>Update CHANGELOGs</strong>: Ensure all changes since last
+release are documented in the <code>[Unreleased]</code> section of each
+affected package’s CHANGELOG.md</p></li>
+<li><p><strong>Run release script</strong>:</p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="ex">npm</span> run release:patch    <span class="co"># Fixes and additions</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a><span class="ex">npm</span> run release:minor    <span class="co"># API breaking changes</span></span></code></pre></div></li>
+</ol>
+<p>The script handles: version bump, CHANGELOG finalization, commit,
+tag, publish, and adding new <code>[Unreleased]</code> sections.</p>
+<h2 id="critical-tool-usage-rules-critical"><strong>CRITICAL</strong>
+Tool Usage Rules <strong>CRITICAL</strong></h2>
+<ul>
+<li>NEVER use sed/cat to read a file or a range of a file. Always use
+the read tool (use offset + limit for ranged reads).</li>
+<li>You MUST read every file you modify in full before editing.</li>
+</ul>
+<h2
+id="critical-git-rules-for-parallel-agents-critical"><strong>CRITICAL</strong>
+Git Rules for Parallel Agents <strong>CRITICAL</strong></h2>
+<p>Multiple agents may work on different files in the same worktree
+simultaneously. You MUST follow these rules:</p>
+<h3 id="committing">Committing</h3>
+<ul>
+<li><strong>ONLY commit files YOU changed in THIS session</strong></li>
+<li>ALWAYS include <code>fixes #&lt;number&gt;</code> or
+<code>closes #&lt;number&gt;</code> in the commit message when there is
+a related issue or PR</li>
+<li>NEVER use <code>git add -A</code> or <code>git add .</code> - these
+sweep up changes from other agents</li>
+<li>ALWAYS use <code>git add &lt;specific-file-paths&gt;</code> listing
+only files you modified</li>
+<li>Before committing, run <code>git status</code> and verify you are
+only staging YOUR files</li>
+<li>Track which files you created/modified/deleted during the
+session</li>
+</ul>
+<h3 id="forbidden-git-operations">Forbidden Git Operations</h3>
+<p>These commands can destroy other agents’ work: -
+<code>git reset --hard</code> - destroys uncommitted changes -
+<code>git checkout .</code> - destroys uncommitted changes -
+<code>git clean -fd</code> - deletes untracked files -
+<code>git stash</code> - stashes ALL changes including other agents’
+work - <code>git add -A</code> / <code>git add .</code> - stages other
+agents’ uncommitted work - <code>git commit --no-verify</code> -
+bypasses required checks and is never allowed</p>
+<h3 id="safe-workflow">Safe Workflow</h3>
+<div class="sourceCode" id="cb3"><pre
+class="sourceCode bash"><code class="sourceCode bash"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># 1. Check status first</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> status</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="co"># 2. Add ONLY your specific files</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> add packages/ai/src/providers/transform-messages.ts</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> add packages/ai/CHANGELOG.md</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a><span class="co"># 3. Commit</span></span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> commit <span class="at">-m</span> <span class="st">&quot;fix(ai): description&quot;</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a><span class="co"># 4. Push (pull --rebase if needed, but NEVER reset/checkout)</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a><span class="fu">git</span> pull <span class="at">--rebase</span> <span class="kw">&amp;&amp;</span> <span class="fu">git</span> push</span></code></pre></div>
+<h3 id="if-rebase-conflicts-occur">If Rebase Conflicts Occur</h3>
+<ul>
+<li>Resolve conflicts in YOUR files only</li>
+<li>If conflict is in a file you didn’t modify, abort and ask the
+user</li>
+<li>NEVER force push</li>
+</ul>
