@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "10-mirrors/coding-agent/packages_coding-agent_README.md",
+                "file": "90-reference/repo/README.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "packages_coding-agent_README"
+              "title": "README"
             }
           }
         ]
@@ -185,19 +185,21 @@
   },
   "active": "58c77145a4d746b3",
   "lastOpenFiles": [
+    "90-reference/repo/AGENTS.md",
+    "90-reference/repo/README.md",
+    "00-start/home.md",
+    "index.md",
+    "10-mirrors/coding-agent/packages_coding-agent_README.md",
     "resources/bench.png.md",
     "resources",
     "01-packages/pods/home.md",
     "10-mirrors/agent/packages_agent_README.md",
     "00-start/dashboards.md",
-    "index.md",
     "90-reference/repo/CLAUDE.md",
     "90-reference/repo/CONTRIBUTING.md",
-    "90-reference/repo/README.md",
     "01-packages/agent/dashboard.md",
     "01-packages/coding-agent/home.md",
     "01-packages/coding-agent/guides/json.md",
-    "00-start/home.md",
     "01-packages/mom/home.md",
     "Untitled.canvas",
     "00-start/graph-index.md",
@@ -211,8 +213,6 @@
     "10-mirrors/pods/docs/packages_pods_docs_plan.md",
     "10-mirrors/pods/docs/packages_pods_docs_models.md",
     "10-mirrors/pods/docs/packages_pods_docs_kimi-k2.md",
-    "10-mirrors/pods/docs/packages_pods_docs_implementation-plan.md",
-    "10-mirrors/pods/docs/packages_pods_docs_gpt-oss.md",
     "10-mirrors/web-ui/examples",
     "10-mirrors/web-ui/api",
     "10-mirrors/tui/api",
