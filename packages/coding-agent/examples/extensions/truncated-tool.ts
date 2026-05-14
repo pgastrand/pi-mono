@@ -15,7 +15,7 @@
  */
 
 import { mkdtemp, writeFile } from "node:fs/promises";
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import {
 	DEFAULT_MAX_BYTES,
 	DEFAULT_MAX_LINES,
@@ -23,12 +23,12 @@ import {
 	type TruncationResult,
 	truncateHead,
 	withFileMutationQueue,
-} from "@mariozechner/pi-coding-agent";
-import { Text } from "@mariozechner/pi-tui";
-import { Type } from "@sinclair/typebox";
+} from "@earendil-works/pi-coding-agent";
+import { Text } from "@earendil-works/pi-tui";
 import { execSync } from "child_process";
 import { tmpdir } from "os";
 import { join } from "path";
+import { Type } from "typebox";
 
 const RgParams = Type.Object({
 	pattern: Type.String({ description: "Search pattern (regex)" }),
@@ -135,7 +135,7 @@ export default function (pi: ExtensionAPI) {
 		},
 
 		// Custom rendering of the tool call (shown before/during execution)
-		renderCall(args, theme) {
+		renderCall(args, theme, _context) {
 			let text = theme.fg("toolTitle", theme.bold("rg "));
 			text += theme.fg("accent", `"${args.pattern}"`);
 			if (args.path) {
@@ -148,7 +148,7 @@ export default function (pi: ExtensionAPI) {
 		},
 
 		// Custom rendering of the tool result
-		renderResult(result, { expanded, isPartial }, theme) {
+		renderResult(result, { expanded, isPartial }, theme, _context) {
 			const details = result.details as RgDetails | undefined;
 
 			// Handle streaming/partial results

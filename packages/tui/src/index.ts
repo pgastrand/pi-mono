@@ -4,6 +4,7 @@
 export {
 	type AutocompleteItem,
 	type AutocompleteProvider,
+	type AutocompleteSuggestions,
 	CombinedAutocompleteProvider,
 	type SlashCommand,
 } from "./autocomplete.js";
@@ -13,7 +14,7 @@ export { CancellableLoader } from "./components/cancellable-loader.js";
 export { Editor, type EditorOptions, type EditorTheme } from "./components/editor.js";
 export { Image, type ImageOptions, type ImageTheme } from "./components/image.js";
 export { Input } from "./components/input.js";
-export { Loader } from "./components/loader.js";
+export { Loader, type LoaderIndicatorOptions } from "./components/loader.js";
 export { type DefaultTextStyle, Markdown, type MarkdownTheme } from "./components/markdown.js";
 export {
 	type SelectItem,
@@ -77,12 +78,14 @@ export {
 	getJpegDimensions,
 	getPngDimensions,
 	getWebpDimensions,
+	hyperlink,
 	type ImageDimensions,
 	type ImageProtocol,
 	type ImageRenderOptions,
 	imageFallback,
 	renderImage,
 	resetCapabilitiesCache,
+	setCapabilities,
 	setCellDimensions,
 	type TerminalCapabilities,
 } from "./terminal-image.js";

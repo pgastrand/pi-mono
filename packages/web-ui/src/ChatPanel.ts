@@ -2,7 +2,7 @@ import { Badge } from "@mariozechner/mini-lit/dist/Badge.js";
 import { html, LitElement } from "lit";
 import { customElement, state } from "lit/decorators.js";
 import "./components/AgentInterface.js";
-import type { Agent, AgentTool } from "@mariozechner/pi-agent-core";
+import type { Agent, AgentTool } from "@earendil-works/pi-agent-core";
 import type { AgentInterface } from "./components/AgentInterface.js";
 import { ArtifactsRuntimeProvider } from "./components/sandbox/ArtifactsRuntimeProvider.js";
 import { AttachmentsRuntimeProvider } from "./components/sandbox/AttachmentsRuntimeProvider.js";
@@ -141,7 +141,7 @@ export class ChatPanel extends LitElement {
 		const additionalTools =
 			config?.toolsFactory?.(agent, this.agentInterface, this.artifactsPanel, runtimeProvidersFactory) || [];
 		const tools = [this.artifactsPanel.tool, ...additionalTools];
-		this.agent.setTools(tools);
+		this.agent.state.tools = tools;
 
 		// Reconstruct artifacts from existing messages
 		// Temporarily disable the onArtifactsChange callback to prevent auto-opening on load

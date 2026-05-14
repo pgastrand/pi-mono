@@ -17,6 +17,7 @@ export {
 export {
 	type ApiKeyCredential,
 	type AuthCredential,
+	type AuthStatus,
 	AuthStorage,
 	type AuthStorageBackend,
 	FileAuthStorageBackend,
@@ -54,10 +55,13 @@ export type {
 	AgentToolResult,
 	AgentToolUpdateCallback,
 	AppKeybinding,
+	AutocompleteProviderFactory,
 	BashToolCallEvent,
 	BeforeAgentStartEvent,
+	BeforeAgentStartEventResult,
 	BeforeProviderRequestEvent,
 	BeforeProviderRequestEventResult,
+	BuildSystemPromptOptions,
 	CompactOptions,
 	ContextEvent,
 	ContextUsage,
@@ -97,23 +101,23 @@ export type {
 	ReadToolCallEvent,
 	RegisteredCommand,
 	RegisteredTool,
+	ResolvedCommand,
 	SessionBeforeCompactEvent,
 	SessionBeforeForkEvent,
 	SessionBeforeSwitchEvent,
 	SessionBeforeTreeEvent,
 	SessionCompactEvent,
-	SessionForkEvent,
 	SessionShutdownEvent,
 	SessionStartEvent,
-	SessionSwitchEvent,
 	SessionTreeEvent,
 	SlashCommandInfo,
-	SlashCommandLocation,
 	SlashCommandSource,
+	SourceInfo,
 	TerminalInputHandler,
 	ToolCallEvent,
 	ToolCallEventResult,
 	ToolDefinition,
+	ToolExecutionMode,
 	ToolInfo,
 	ToolRenderResultOptions,
 	ToolResultEvent,
@@ -122,10 +126,12 @@ export type {
 	UserBashEvent,
 	UserBashEventResult,
 	WidgetPlacement,
+	WorkingIndicatorOptions,
 	WriteToolCallEvent,
 } from "./core/extensions/index.js";
 export {
 	createExtensionRuntime,
+	defineTool,
 	discoverAndLoadExtensions,
 	ExtensionRunner,
 	isBashToolResult,
@@ -153,13 +159,23 @@ export type {
 } from "./core/package-manager.js";
 export { DefaultPackageManager } from "./core/package-manager.js";
 export type { ResourceCollision, ResourceDiagnostic, ResourceLoader } from "./core/resource-loader.js";
-export { DefaultResourceLoader } from "./core/resource-loader.js";
+export { DefaultResourceLoader, loadProjectContextFiles } from "./core/resource-loader.js";
 // SDK for programmatic usage
 export {
+	AgentSessionRuntime,
+	type AgentSessionRuntimeDiagnostic,
+	type AgentSessionServices,
+	type CreateAgentSessionFromServicesOptions,
 	type CreateAgentSessionOptions,
 	type CreateAgentSessionResult,
+	type CreateAgentSessionRuntimeFactory,
+	type CreateAgentSessionRuntimeResult,
+	type CreateAgentSessionServicesOptions,
 	// Factory
 	createAgentSession,
+	createAgentSessionFromServices,
+	createAgentSessionRuntime,
+	createAgentSessionServices,
 	createBashTool,
 	// Tool factories (for custom cwd)
 	createCodingTools,
@@ -171,8 +187,6 @@ export {
 	createReadTool,
 	createWriteTool,
 	type PromptTemplate,
-	// Pre-built tools (use process.cwd())
-	readOnlyTools,
 } from "./core/sdk.js";
 export {
 	type BranchSummaryEntry,
@@ -214,6 +228,7 @@ export {
 	type Skill,
 	type SkillFrontmatter,
 } from "./core/skills.js";
+export { createSyntheticSourceInfo } from "./core/source-info.js";
 // Tools
 export {
 	type BashOperations,
@@ -222,37 +237,37 @@ export {
 	type BashToolDetails,
 	type BashToolInput,
 	type BashToolOptions,
-	bashTool,
-	codingTools,
+	createBashToolDefinition,
+	createEditToolDefinition,
+	createFindToolDefinition,
+	createGrepToolDefinition,
 	createLocalBashOperations,
+	createLsToolDefinition,
+	createReadToolDefinition,
+	createWriteToolDefinition,
 	DEFAULT_MAX_BYTES,
 	DEFAULT_MAX_LINES,
 	type EditOperations,
 	type EditToolDetails,
 	type EditToolInput,
 	type EditToolOptions,
-	editTool,
 	type FindOperations,
 	type FindToolDetails,
 	type FindToolInput,
 	type FindToolOptions,
-	findTool,
 	formatSize,
 	type GrepOperations,
 	type GrepToolDetails,
 	type GrepToolInput,
 	type GrepToolOptions,
-	grepTool,
 	type LsOperations,
 	type LsToolDetails,
 	type LsToolInput,
 	type LsToolOptions,
-	lsTool,
 	type ReadOperations,
 	type ReadToolDetails,
 	type ReadToolInput,
 	type ReadToolOptions,
-	readTool,
 	type ToolsOptions,
 	type TruncationOptions,
 	type TruncationResult,
@@ -263,15 +278,21 @@ export {
 	type WriteToolInput,
 	type WriteToolOptions,
 	withFileMutationQueue,
-	writeTool,
 } from "./core/tools/index.js";
 // Main entry point
-export { main } from "./main.js";
+export { type MainOptions, main } from "./main.js";
 // Run modes for programmatic SDK usage
 export {
 	InteractiveMode,
 	type InteractiveModeOptions,
+	type ModelInfo,
 	type PrintModeOptions,
+	RpcClient,
+	type RpcClientOptions,
+	type RpcCommand,
+	type RpcEventListener,
+	type RpcResponse,
+	type RpcSessionState,
 	runPrintMode,
 	runRpcMode,
 } from "./modes/index.js";

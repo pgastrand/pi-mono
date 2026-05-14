@@ -16,6 +16,7 @@ packages/*/dist-firefox/
 .vscode/
 .zed/
 .idea/
+.claude/
 *.swp
 *.swo
 *~
@@ -34,3 +35,7 @@ pi-*.html
 out.html
 packages/coding-agent/binaries/
 todo.md
+plans/
+.pi/hf-sessions/
+.pi/hf-sessions-backup/
+collect.sh

@@ -1,6 +1,6 @@
-import type { AutocompleteProvider, CombinedAutocompleteProvider } from "../autocomplete.js";
+import type { AutocompleteProvider, AutocompleteSuggestions } from "../autocomplete.js";
 import { getKeybindings } from "../keybindings.js";
-import { decodeKittyPrintable, matchesKey } from "../keys.js";
+import { decodePrintableKey, matchesKey } from "../keys.js";
 import { KillRing } from "../kill-ring.js";
 import { type Component, CURSOR_MARKER, type Focusable, type TUI } from "../tui.js";
 import { UndoStack } from "../undo-stack.js";
@@ -212,6 +212,8 @@ const SLASH_COMMAND_SELECT_LIST_LAYOUT: SelectListLayoutOptions = {
 	maxPrimaryColumnWidth: 32,
 };
 
+const ATTACHMENT_AUTOCOMPLETE_DEBOUNCE_MS = 20;
+
 export class Editor implements Component, Focusable {
 	private state: EditorState = {
 		lines: [""],
@@ -241,6 +243,11 @@ export class Editor implements Component, Focusable {
 	private autocompleteState: "regular" | "force" | null = null;
 	private autocompletePrefix: string = "";
 	private autocompleteMaxVisible: number = 5;
+	private autocompleteAbort?: AbortController;
+	private autocompleteDebounceTimer?: ReturnType<typeof setTimeout>;
+	private autocompleteRequestTask: Promise<void> = Promise.resolve();
+	private autocompleteStartToken: number = 0;
+	private autocompleteRequestId: number = 0;
 
 	// Paste tracking for large pastes
 	private pastes: Map<number, string> = new Map();
@@ -263,6 +270,13 @@ export class Editor implements Component, Focusable {
 
 	// Preferred visual column for vertical cursor movement (sticky column)
 	private preferredVisualCol: number | null = null;
+
+	// When the cursor is snapped to the start of an atomic segment, e.g. a
+	// paste marker, cursorCol no longer reflects where the cursor would have
+	// landed. This field stores the pre-snap cursorCol so that the next
+	// vertical move can resolve it to a visual column on whatever VL it belongs
+	// to.
+	private snappedFromCursorCol: number | null = null;
 
 	// Undo support
 	private undoStack = new UndoStack<EditorState>();
@@ -316,6 +330,7 @@ export class Editor implements Component, Focusable {
 	}
 
 	setAutocompleteProvider(provider: AutocompleteProvider): void {
+		this.cancelAutocomplete();
 		this.autocompleteProvider = provider;
 	}
 
@@ -527,11 +542,12 @@ export class Editor implements Component, Focusable {
 				return;
 			}
 
-			if (data.charCodeAt(0) >= 32) {
+			const printable = decodePrintableKey(data) ?? (data.charCodeAt(0) >= 32 ? data : undefined);
+			if (printable !== undefined) {
 				// Printable character - perform the jump
 				const direction = this.jumpMode;
 				this.jumpMode = null;
-				this.jumpToChar(data, direction);
+				this.jumpToChar(printable, direction);
 				return;
 			}
 
@@ -591,8 +607,6 @@ export class Editor implements Component, Focusable {
 			if (kb.matches(data, "tui.input.tab")) {
 				const selected = this.autocompleteList.getSelectedItem();
 				if (selected && this.autocompleteProvider) {
-					const shouldChainSlashArgumentAutocomplete = this.shouldChainSlashArgumentAutocompleteOnTabSelection();
-
 					this.pushUndoSnapshot();
 					this.lastAction = null;
 					const result = this.autocompleteProvider.applyCompletion(
@@ -607,10 +621,6 @@ export class Editor implements Component, Focusable {
 					this.setCursorCol(result.cursorCol);
 					this.cancelAutocomplete();
 					if (this.onChange) this.onChange(this.getText());
-
-					if (shouldChainSlashArgumentAutocomplete && this.isBareCompletedSlashCommandAtCursor()) {
-						this.tryTriggerAutocomplete();
-					}
 				}
 				return;
 			}
@@ -798,9 +808,9 @@ export class Editor implements Component, Focusable {
 			return;
 		}
 
-		const kittyPrintable = decodeKittyPrintable(data);
-		if (kittyPrintable !== undefined) {
-			this.insertCharacter(kittyPrintable);
+		const printable = decodePrintableKey(data);
+		if (printable !== undefined) {
+			this.insertCharacter(printable);
 			return;
 		}
 
@@ -928,6 +938,7 @@ export class Editor implements Component, Focusable {
 	}
 
 	setText(text: string): void {
+		this.cancelAutocomplete();
 		this.lastAction = null;
 		this.historyIndex = -1; // Exit history browsing mode
 		const normalized = this.normalizeText(text);
@@ -945,6 +956,7 @@ export class Editor implements Component, Focusable {
 	 */
 	insertTextAtCursor(text: string): void {
 		if (!text) return;
+		this.cancelAutocomplete();
 		this.pushUndoSnapshot();
 		this.lastAction = null;
 		this.historyIndex = -1;
@@ -1042,17 +1054,16 @@ export class Editor implements Component, Focusable {
 			if (char === "/" && this.isAtStartOfMessage()) {
 				this.tryTriggerAutocomplete();
 			}
-			// Auto-trigger for "@" file reference (fuzzy search)
-			else if (char === "@") {
+			// Auto-trigger for symbol-based completion like @ or # at token boundaries
+			else if (char === "@" || char === "#") {
 				const currentLine = this.state.lines[this.state.cursorLine] || "";
 				const textBeforeCursor = currentLine.slice(0, this.state.cursorCol);
-				// Only trigger if @ is after whitespace or at start of line
-				const charBeforeAt = textBeforeCursor[textBeforeCursor.length - 2];
-				if (textBeforeCursor.length === 1 || charBeforeAt === " " || charBeforeAt === "\t") {
+				const charBeforeSymbol = textBeforeCursor[textBeforeCursor.length - 2];
+				if (textBeforeCursor.length === 1 || charBeforeSymbol === " " || charBeforeSymbol === "\t") {
 					this.tryTriggerAutocomplete();
 				}
 			}
-			// Also auto-trigger when typing letters in a slash command context
+			// Also auto-trigger when typing letters in a slash command or symbol completion context
 			else if (/[a-zA-Z0-9.\-_]/.test(char)) {
 				const currentLine = this.state.lines[this.state.cursorLine] || "";
 				const textBeforeCursor = currentLine.slice(0, this.state.cursorCol);
@@ -1060,8 +1071,8 @@ export class Editor implements Component, Focusable {
 				if (this.isInSlashCommandContext(textBeforeCursor)) {
 					this.tryTriggerAutocomplete();
 				}
-				// Check if we're in an @ file reference context
-				else if (textBeforeCursor.match(/(?:^|[\s])@[^\s]*$/)) {
+				// Check if we're in a symbol-based completion context like @ or #
+				else if (textBeforeCursor.match(/(?:^|[\s])[@#][^\s]*$/)) {
 					this.tryTriggerAutocomplete();
 				}
 			}
@@ -1071,13 +1082,26 @@ export class Editor implements Component, Focusable {
 	}
 
 	private handlePaste(pastedText: string): void {
+		this.cancelAutocomplete();
 		this.historyIndex = -1; // Exit history browsing mode
 		this.lastAction = null;
 
 		this.pushUndoSnapshot();
 
+		// Some terminals (e.g. tmux popups with extended-keys-format=csi-u) re-encode
+		// control bytes inside bracketed paste as CSI-u Ctrl+<letter> sequences
+		// (ESC [ <codepoint> ; 5 u). Decode those back to their literal byte so the
+		// per-char filter below preserves newlines instead of stripping ESC and
+		// leaking the printable tail (e.g. "[106;5u") into the editor.
+		const decodedText = pastedText.replace(/\x1b\[(\d+);5u/g, (match, code) => {
+			const cp = Number(code);
+			if (cp >= 97 && cp <= 122) return String.fromCharCode(cp - 96);
+			if (cp >= 65 && cp <= 90) return String.fromCharCode(cp - 64);
+			return match;
+		});
+
 		// Clean the pasted text: normalize line endings, expand tabs
-		const cleanText = this.normalizeText(pastedText);
+		const cleanText = this.normalizeText(decodedText);
 
 		// Filter out non-printable characters except newlines
 		let filteredText = cleanText
@@ -1126,6 +1150,7 @@ export class Editor implements Component, Focusable {
 	}
 
 	private addNewLine(): void {
+		this.cancelAutocomplete();
 		this.historyIndex = -1; // Exit history browsing mode
 		this.lastAction = null;
 
@@ -1161,6 +1186,7 @@ export class Editor implements Component, Focusable {
 	}
 
 	private submitValue(): void {
+		this.cancelAutocomplete();
 		const result = this.expandPasteMarkers(this.state.lines.join("\n")).trim();
 
 		this.state = { lines: [""], cursorLine: 0, cursorCol: 0 };
@@ -1225,8 +1251,8 @@ export class Editor implements Component, Focusable {
 			if (this.isInSlashCommandContext(textBeforeCursor)) {
 				this.tryTriggerAutocomplete();
 			}
-			// @ file reference context
-			else if (textBeforeCursor.match(/(?:^|[\s])@[^\s]*$/)) {
+			// Symbol-based completion context like @ or #
+			else if (textBeforeCursor.match(/(?:^|[\s])[@#][^\s]*$/)) {
 				this.tryTriggerAutocomplete();
 			}
 		}
@@ -1239,6 +1265,7 @@ export class Editor implements Component, Focusable {
 	private setCursorCol(col: number): void {
 		this.state.cursorCol = col;
 		this.preferredVisualCol = null;
+		this.snappedFromCursorCol = null;
 	}
 
 	/**
@@ -1252,47 +1279,79 @@ export class Editor implements Component, Focusable {
 	): void {
 		const currentVL = visualLines[currentVisualLine];
 		const targetVL = visualLines[targetVisualLine];
+		if (!(currentVL && targetVL)) return;
 
-		if (currentVL && targetVL) {
-			const currentVisualCol = this.state.cursorCol - currentVL.startCol;
+		// When the cursor was snapped to a segment start, resolve the pre-snap
+		// position against the VL it belongs to. This gives the correct visual
+		// column even after a resize reshuffles VLs.
+		let currentVisualCol: number;
+		if (this.snappedFromCursorCol !== null) {
+			const vlIndex = this.findVisualLineAt(visualLines, currentVL.logicalLine, this.snappedFromCursorCol);
+			currentVisualCol = this.snappedFromCursorCol - visualLines[vlIndex].startCol;
+		} else {
+			currentVisualCol = this.state.cursorCol - currentVL.startCol;
+		}
 
-			// For non-last segments, clamp to length-1 to stay within the segment
-			const isLastSourceSegment =
-				currentVisualLine === visualLines.length - 1 ||
-				visualLines[currentVisualLine + 1]?.logicalLine !== currentVL.logicalLine;
-			const sourceMaxVisualCol = isLastSourceSegment ? currentVL.length : Math.max(0, currentVL.length - 1);
+		// For non-last segments, clamp to length-1 to stay within the segment
+		const isLastSourceSegment =
+			currentVisualLine === visualLines.length - 1 ||
+			visualLines[currentVisualLine + 1]?.logicalLine !== currentVL.logicalLine;
+		const sourceMaxVisualCol = isLastSourceSegment ? currentVL.length : Math.max(0, currentVL.length - 1);
 
-			const isLastTargetSegment =
-				targetVisualLine === visualLines.length - 1 ||
-				visualLines[targetVisualLine + 1]?.logicalLine !== targetVL.logicalLine;
-			const targetMaxVisualCol = isLastTargetSegment ? targetVL.length : Math.max(0, targetVL.length - 1);
+		const isLastTargetSegment =
+			targetVisualLine === visualLines.length - 1 ||
+			visualLines[targetVisualLine + 1]?.logicalLine !== targetVL.logicalLine;
+		const targetMaxVisualCol = isLastTargetSegment ? targetVL.length : Math.max(0, targetVL.length - 1);
 
-			const moveToVisualCol = this.computeVerticalMoveColumn(
-				currentVisualCol,
-				sourceMaxVisualCol,
-				targetMaxVisualCol,
-			);
+		const moveToVisualCol = this.computeVerticalMoveColumn(currentVisualCol, sourceMaxVisualCol, targetMaxVisualCol);
 
-			// Set cursor position
-			this.state.cursorLine = targetVL.logicalLine;
-			const targetCol = targetVL.startCol + moveToVisualCol;
-			const logicalLine = this.state.lines[targetVL.logicalLine] || "";
-			this.state.cursorCol = Math.min(targetCol, logicalLine.length);
+		// Set cursor position
+		this.state.cursorLine = targetVL.logicalLine;
+		const targetCol = targetVL.startCol + moveToVisualCol;
+		const logicalLine = this.state.lines[targetVL.logicalLine] || "";
+		this.state.cursorCol = Math.min(targetCol, logicalLine.length);
 
-			// Snap cursor to atomic segment boundary (e.g. paste markers)
-			// so the cursor never lands in the middle of a multi-grapheme unit.
-			// Single-grapheme segments don't need snapping.
-			const segments = [...this.segment(logicalLine)];
-			for (const seg of segments) {
-				if (seg.index > this.state.cursorCol) break;
-				if (seg.segment.length <= 1) continue;
-				if (this.state.cursorCol < seg.index + seg.segment.length) {
-					// jump to the start of the segment when moving up, to the end when moving down.
-					this.state.cursorCol = currentVisualLine > targetVisualLine ? seg.index : seg.index + seg.segment.length;
-					break;
+		// Snap cursor to atomic segment boundary (e.g. paste markers)
+		// so the cursor never lands in the middle of a multi-grapheme unit.
+		// Single-grapheme segments don't need snapping.
+		const segments = [...this.segment(logicalLine)];
+		for (const seg of segments) {
+			if (seg.index > this.state.cursorCol) break;
+			if (seg.segment.length <= 1) continue;
+			if (this.state.cursorCol < seg.index + seg.segment.length) {
+				const isContinuation = seg.index < targetVL.startCol;
+				const isMovingDown = targetVisualLine > currentVisualLine;
+
+				if (isContinuation && isMovingDown) {
+					// The segment started on a previous visual line, and we
+					// already visited it on the way down. Skip all remaining
+					// continuation VLs and land on the first VL past it.
+					const segEnd = seg.index + seg.segment.length;
+					let next = targetVisualLine + 1;
+					while (
+						next < visualLines.length &&
+						visualLines[next].logicalLine === targetVL.logicalLine &&
+						visualLines[next].startCol < segEnd
+					) {
+						next++;
+					}
+					if (next < visualLines.length) {
+						this.moveToVisualLine(visualLines, currentVisualLine, next);
+						return;
+					}
 				}
+
+				// Snap to the start of the segment so it gets highlighted.
+				// Store the pre-snap position so the next vertical move can
+				// resolve it to the correct visual column.
+				this.snappedFromCursorCol = this.state.cursorCol;
+				this.state.cursorCol = seg.index;
+				return;
 			}
 		}
+
+		// No snap occurred – we moved out of the atomic segment.
+		this.snappedFromCursorCol = null;
 	}
 
 	/**
@@ -1556,8 +1615,8 @@ export class Editor implements Component, Focusable {
 			if (this.isInSlashCommandContext(textBeforeCursor)) {
 				this.tryTriggerAutocomplete();
 			}
-			// @ file reference context
-			else if (textBeforeCursor.match(/(?:^|[\s])@[^\s]*$/)) {
+			// Symbol-based completion context like @ or #
+			else if (textBeforeCursor.match(/(?:^|[\s])[@#][^\s]*$/)) {
 				this.tryTriggerAutocomplete();
 			}
 		}
@@ -1598,27 +1657,34 @@ export class Editor implements Component, Focusable {
 	}
 
 	/**
+	 * Find the visual line index that contains the given logical position.
+	 */
+	private findVisualLineAt(
+		visualLines: Array<{ logicalLine: number; startCol: number; length: number }>,
+		line: number,
+		col: number,
+	): number {
+		for (let i = 0; i < visualLines.length; i++) {
+			const vl = visualLines[i];
+			if (!vl || vl.logicalLine !== line) continue;
+			const offset = col - vl.startCol;
+			// Cursor is in this segment if it's within range. For the last
+			// segment of a logical line, cursor can be at length (end position)
+			const isLastSegmentOfLine = i === visualLines.length - 1 || visualLines[i + 1]?.logicalLine !== vl.logicalLine;
+			if (offset >= 0 && (offset < vl.length || (isLastSegmentOfLine && offset === vl.length))) {
+				return i;
+			}
+		}
+		return visualLines.length - 1;
+	}
+
+	/**
 	 * Find the visual line index for the current cursor position.
 	 */
 	private findCurrentVisualLine(
 		visualLines: Array<{ logicalLine: number; startCol: number; length: number }>,
 	): number {
-		for (let i = 0; i < visualLines.length; i++) {
-			const vl = visualLines[i];
-			if (!vl) continue;
-			if (vl.logicalLine === this.state.cursorLine) {
-				const colInSegment = this.state.cursorCol - vl.startCol;
-				// Cursor is in this segment if it's within range
-				// For the last segment of a logical line, cursor can be at length (end position)
-				const isLastSegmentOfLine =
-					i === visualLines.length - 1 || visualLines[i + 1]?.logicalLine !== vl.logicalLine;
-				if (colInSegment >= 0 && (colInSegment < vl.length || (isLastSegmentOfLine && colInSegment <= vl.length))) {
-					return i;
-				}
-			}
-		}
-		// Fallback: return last visual line
-		return visualLines.length - 1;
+		return this.findVisualLineAt(visualLines, this.state.cursorLine, this.state.cursorCol);
 	}
 
 	private moveCursor(deltaLine: number, deltaCol: number): void {
@@ -1986,26 +2052,6 @@ export class Editor implements Component, Focusable {
 		return this.isSlashMenuAllowed() && textBeforeCursor.trimStart().startsWith("/");
 	}
 
-	private shouldChainSlashArgumentAutocompleteOnTabSelection(): boolean {
-		if (this.autocompleteState !== "regular") {
-			return false;
-		}
-
-		const currentLine = this.state.lines[this.state.cursorLine] || "";
-		const textBeforeCursor = currentLine.slice(0, this.state.cursorCol);
-		return this.isInSlashCommandContext(textBeforeCursor) && !textBeforeCursor.trimStart().includes(" ");
-	}
-
-	private isBareCompletedSlashCommandAtCursor(): boolean {
-		const currentLine = this.state.lines[this.state.cursorLine] || "";
-		if (this.state.cursorCol !== currentLine.length) {
-			return false;
-		}
-
-		const textBeforeCursor = currentLine.slice(0, this.state.cursorCol).trimStart();
-		return /^\/\S+ $/.test(textBeforeCursor);
-	}
-
 	// Autocomplete methods
 	/**
 	 * Find the best autocomplete item index for the given prefix.
@@ -2045,39 +2091,7 @@ export class Editor implements Component, Focusable {
 	}
 
 	private tryTriggerAutocomplete(explicitTab: boolean = false): void {
-		if (!this.autocompleteProvider) return;
-
-		// Check if we should trigger file completion on Tab
-		if (explicitTab) {
-			const provider = this.autocompleteProvider as CombinedAutocompleteProvider;
-			const shouldTrigger =
-				!provider.shouldTriggerFileCompletion ||
-				provider.shouldTriggerFileCompletion(this.state.lines, this.state.cursorLine, this.state.cursorCol);
-			if (!shouldTrigger) {
-				return;
-			}
-		}
-
-		const suggestions = this.autocompleteProvider.getSuggestions(
-			this.state.lines,
-			this.state.cursorLine,
-			this.state.cursorCol,
-		);
-
-		if (suggestions && suggestions.items.length > 0) {
-			this.autocompletePrefix = suggestions.prefix;
-			this.autocompleteList = this.createAutocompleteList(suggestions.prefix, suggestions.items);
-
-			// If typed prefix exactly matches one of the suggestions, select that item
-			const bestMatchIndex = this.getBestAutocompleteMatchIndex(suggestions.items, suggestions.prefix);
-			if (bestMatchIndex >= 0) {
-				this.autocompleteList.setSelectedIndex(bestMatchIndex);
-			}
-
-			this.autocompleteState = "regular";
-		} else {
-			this.cancelAutocomplete();
-		}
+		this.requestAutocomplete({ force: false, explicitTab });
 	}
 
 	private handleTabCompletion(): void {
@@ -2086,7 +2100,6 @@ export class Editor implements Component, Focusable {
 		const currentLine = this.state.lines[this.state.cursorLine] || "";
 		const beforeCursor = currentLine.slice(0, this.state.cursorCol);
 
-		// Check if we're in a slash command context
 		if (this.isInSlashCommandContext(beforeCursor) && !beforeCursor.trimStart().includes(" ")) {
 			this.handleSlashCommandCompletion();
 		} else {
@@ -2095,71 +2108,177 @@ export class Editor implements Component, Focusable {
 	}
 
 	private handleSlashCommandCompletion(): void {
-		this.tryTriggerAutocomplete(true);
+		this.requestAutocomplete({ force: false, explicitTab: true });
 	}
 
-	/*
-https://github.com/EsotericSoftware/spine-runtimes/actions/runs/19536643416/job/559322883
-17 this job fails with https://github.com/EsotericSoftware/spine-runtimes/actions/runs/19
-536643416/job/55932288317 havea  look at .gi
-	 */
 	private forceFileAutocomplete(explicitTab: boolean = false): void {
+		this.requestAutocomplete({ force: true, explicitTab });
+	}
+
+	private requestAutocomplete(options: { force: boolean; explicitTab: boolean }): void {
 		if (!this.autocompleteProvider) return;
 
-		// Check if provider supports force file suggestions via runtime check
-		const provider = this.autocompleteProvider as {
-			getForceFileSuggestions?: CombinedAutocompleteProvider["getForceFileSuggestions"];
-		};
-		if (typeof provider.getForceFileSuggestions !== "function") {
-			this.tryTriggerAutocomplete(true);
-			return;
-		}
-
-		const suggestions = provider.getForceFileSuggestions(
-			this.state.lines,
-			this.state.cursorLine,
-			this.state.cursorCol,
-		);
-
-		if (suggestions && suggestions.items.length > 0) {
-			// If there's exactly one suggestion, apply it immediately
-			if (explicitTab && suggestions.items.length === 1) {
-				const item = suggestions.items[0]!;
-				this.pushUndoSnapshot();
-				this.lastAction = null;
-				const result = this.autocompleteProvider.applyCompletion(
+		if (options.force) {
+			const shouldTrigger =
+				!this.autocompleteProvider.shouldTriggerFileCompletion ||
+				this.autocompleteProvider.shouldTriggerFileCompletion(
 					this.state.lines,
 					this.state.cursorLine,
 					this.state.cursorCol,
-					item,
-					suggestions.prefix,
 				);
-				this.state.lines = result.lines;
-				this.state.cursorLine = result.cursorLine;
-				this.setCursorCol(result.cursorCol);
-				if (this.onChange) this.onChange(this.getText());
+			if (!shouldTrigger) {
+				return;
+			}
+		}
+
+		this.cancelAutocompleteRequest();
+		const startToken = ++this.autocompleteStartToken;
+
+		const debounceMs = this.getAutocompleteDebounceMs(options);
+		if (debounceMs > 0) {
+			this.autocompleteDebounceTimer = setTimeout(() => {
+				this.autocompleteDebounceTimer = undefined;
+				void this.startAutocompleteRequest(startToken, options);
+			}, debounceMs);
+			return;
+		}
+
+		void this.startAutocompleteRequest(startToken, options);
+	}
+
+	private async startAutocompleteRequest(
+		startToken: number,
+		options: { force: boolean; explicitTab: boolean },
+	): Promise<void> {
+		const previousTask = this.autocompleteRequestTask;
+		this.autocompleteRequestTask = (async () => {
+			await previousTask;
+			if (startToken !== this.autocompleteStartToken || !this.autocompleteProvider) {
 				return;
 			}
 
-			this.autocompletePrefix = suggestions.prefix;
-			this.autocompleteList = this.createAutocompleteList(suggestions.prefix, suggestions.items);
+			const controller = new AbortController();
+			this.autocompleteAbort = controller;
+			const requestId = ++this.autocompleteRequestId;
+			const snapshotText = this.getText();
+			const snapshotLine = this.state.cursorLine;
+			const snapshotCol = this.state.cursorCol;
 
-			// If typed prefix exactly matches one of the suggestions, select that item
-			const bestMatchIndex = this.getBestAutocompleteMatchIndex(suggestions.items, suggestions.prefix);
-			if (bestMatchIndex >= 0) {
-				this.autocompleteList.setSelectedIndex(bestMatchIndex);
-			}
-
-			this.autocompleteState = "force";
-		} else {
-			this.cancelAutocomplete();
-		}
+			await this.runAutocompleteRequest(requestId, controller, snapshotText, snapshotLine, snapshotCol, options);
+		})();
+		await this.autocompleteRequestTask;
 	}
 
-	private cancelAutocomplete(): void {
+	private getAutocompleteDebounceMs(options: { force: boolean; explicitTab: boolean }): number {
+		if (options.explicitTab || options.force) {
+			return 0;
+		}
+
+		const currentLine = this.state.lines[this.state.cursorLine] || "";
+		const textBeforeCursor = currentLine.slice(0, this.state.cursorCol);
+		const isSymbolAutocompleteContext = /(?:^|[ \t])(?:@(?:"[^"]*|[^\s]*)|#[^\s]*)$/.test(textBeforeCursor);
+		return isSymbolAutocompleteContext ? ATTACHMENT_AUTOCOMPLETE_DEBOUNCE_MS : 0;
+	}
+
+	private async runAutocompleteRequest(
+		requestId: number,
+		controller: AbortController,
+		snapshotText: string,
+		snapshotLine: number,
+		snapshotCol: number,
+		options: { force: boolean; explicitTab: boolean },
+	): Promise<void> {
+		if (!this.autocompleteProvider) return;
+
+		const suggestions = await this.autocompleteProvider.getSuggestions(
+			this.state.lines,
+			this.state.cursorLine,
+			this.state.cursorCol,
+			{ signal: controller.signal, force: options.force },
+		);
+
+		if (!this.isAutocompleteRequestCurrent(requestId, controller, snapshotText, snapshotLine, snapshotCol)) {
+			return;
+		}
+
+		this.autocompleteAbort = undefined;
+
+		if (!suggestions || !Array.isArray(suggestions.items) || suggestions.items.length === 0) {
+			this.cancelAutocomplete();
+			this.tui.requestRender();
+			return;
+		}
+
+		if (options.force && options.explicitTab && suggestions.items.length === 1) {
+			const item = suggestions.items[0]!;
+			this.pushUndoSnapshot();
+			this.lastAction = null;
+			const result = this.autocompleteProvider.applyCompletion(
+				this.state.lines,
+				this.state.cursorLine,
+				this.state.cursorCol,
+				item,
+				suggestions.prefix,
+			);
+			this.state.lines = result.lines;
+			this.state.cursorLine = result.cursorLine;
+			this.setCursorCol(result.cursorCol);
+			if (this.onChange) this.onChange(this.getText());
+			this.tui.requestRender();
+			return;
+		}
+
+		this.applyAutocompleteSuggestions(suggestions, options.force ? "force" : "regular");
+		this.tui.requestRender();
+	}
+
+	private isAutocompleteRequestCurrent(
+		requestId: number,
+		controller: AbortController,
+		snapshotText: string,
+		snapshotLine: number,
+		snapshotCol: number,
+	): boolean {
+		return (
+			!controller.signal.aborted &&
+			requestId === this.autocompleteRequestId &&
+			this.getText() === snapshotText &&
+			this.state.cursorLine === snapshotLine &&
+			this.state.cursorCol === snapshotCol
+		);
+	}
+
+	private applyAutocompleteSuggestions(suggestions: AutocompleteSuggestions, state: "regular" | "force"): void {
+		this.autocompletePrefix = suggestions.prefix;
+		this.autocompleteList = this.createAutocompleteList(suggestions.prefix, suggestions.items);
+
+		const bestMatchIndex = this.getBestAutocompleteMatchIndex(suggestions.items, suggestions.prefix);
+		if (bestMatchIndex >= 0) {
+			this.autocompleteList.setSelectedIndex(bestMatchIndex);
+		}
+
+		this.autocompleteState = state;
+	}
+
+	private cancelAutocompleteRequest(): void {
+		this.autocompleteStartToken += 1;
+		if (this.autocompleteDebounceTimer) {
+			clearTimeout(this.autocompleteDebounceTimer);
+			this.autocompleteDebounceTimer = undefined;
+		}
+		this.autocompleteAbort?.abort();
+		this.autocompleteAbort = undefined;
+	}
+
+	private clearAutocompleteUi(): void {
 		this.autocompleteState = null;
 		this.autocompleteList = undefined;
 		this.autocompletePrefix = "";
+	}
+
+	private cancelAutocomplete(): void {
+		this.cancelAutocompleteRequest();
+		this.clearAutocompleteUi();
 	}
 
 	public isShowingAutocomplete(): boolean {
@@ -2168,29 +2287,6 @@ https://github.com/EsotericSoftware/spine-runtimes/actions/runs/19536643416/job/
 
 	private updateAutocomplete(): void {
 		if (!this.autocompleteState || !this.autocompleteProvider) return;
-
-		if (this.autocompleteState === "force") {
-			this.forceFileAutocomplete();
-			return;
-		}
-
-		const suggestions = this.autocompleteProvider.getSuggestions(
-			this.state.lines,
-			this.state.cursorLine,
-			this.state.cursorCol,
-		);
-		if (suggestions && suggestions.items.length > 0) {
-			this.autocompletePrefix = suggestions.prefix;
-			// Always create new SelectList to ensure update
-			this.autocompleteList = this.createAutocompleteList(suggestions.prefix, suggestions.items);
-
-			// If typed prefix exactly matches one of the suggestions, select that item
-			const bestMatchIndex = this.getBestAutocompleteMatchIndex(suggestions.items, suggestions.prefix);
-			if (bestMatchIndex >= 0) {
-				this.autocompleteList.setSelectedIndex(bestMatchIndex);
-			}
-		} else {
-			this.cancelAutocomplete();
-		}
+		this.requestAutocomplete({ force: this.autocompleteState === "force", explicitTab: false });
 	}
 }
